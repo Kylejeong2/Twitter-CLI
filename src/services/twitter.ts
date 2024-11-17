@@ -16,7 +16,6 @@ export class TwitterService {
       verbose: 1,
     });
     
-    // Ensure cookies directory exists
     if (!fs.existsSync(COOKIES_PATH)) {
       fs.mkdirSync(COOKIES_PATH);
     }
@@ -46,50 +45,30 @@ export class TwitterService {
     }
   }
 
-  async login(): Promise<boolean> {
+  async postTweet(content: string, imagePath?: string): Promise<boolean> {
     try {
-      await this.stagehand.page.goto("https://twitter.com/login");
+      await this.stagehand.page.goto("https://x.com/compose/post");
 
-      // Check if already logged in by looking for compose tweet button
-      const isLoggedIn = await this.stagehand.extract({
-        instruction: "check if the compose tweet button is visible",
+      // Check if we need to login
+      const needsLogin = await this.stagehand.extract({
+        instruction: "check if login form is visible",
         schema: z.object({
-          isVisible: z.boolean()
+          needsLogin: z.boolean()
         })
       });
 
-      if (isLoggedIn.isVisible) {
-        return true;
+      if (needsLogin.needsLogin) {
+        await this.stagehand.act({ 
+          action: `type "${config.TWITTER_USERNAME}" in the username field` 
+        });
+        await this.stagehand.act({ action: "click the Next button" });
+        await this.stagehand.act({ 
+          action: `type "${config.TWITTER_PASSWORD}" in the password field` 
+        });
+        await this.stagehand.act({ action: "click the Log in button" });
+        await this.saveCookies();
       }
 
-      // Login flow
-      await this.stagehand.act({ 
-        action: `type "${config.TWITTER_USERNAME}" in the username field` 
-      });
-      await this.stagehand.act({ action: "click the Next button" });
-      await this.stagehand.act({ 
-        action: `type "${config.TWITTER_PASSWORD}" in the password field` 
-      });
-      await this.stagehand.act({ action: "click the Log in button" });
-
-      // Save cookies after successful login
-      await this.saveCookies();
-      return true;
-
-    } catch (error) {
-      console.error("Login failed:", error);
-      return false;
-    }
-  }
-
-  async postTweet(content: string, imagePath?: string): Promise<boolean> {
-    try {
-      // Ensure we're logged in
-      if (!await this.login()) {
-        throw new Error("Failed to login");
-      }
-
-      await this.stagehand.act({ action: "click the Post button or New Tweet button" });
       await this.stagehand.act({ action: `type "${content}" in the tweet compose box` });
 
       if (imagePath) {
