@@ -20,7 +20,7 @@ program
     try {
       if (options.image) {
         const formData = new FormData();
-        formData.append("content", content);
+        formData.append("content", content); 
         formData.append("image", fs.createReadStream(options.image));
         
         const response = await axios.post(`${API_URL}/tweet`, formData, {
@@ -33,7 +33,7 @@ program
         });
         console.log(response.data.message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error:", error.response?.data?.error || error.message);
     }
   });

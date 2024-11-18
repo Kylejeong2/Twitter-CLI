@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { TwitterService } from "./services/twitter";
-import path from "path";
+import fs from "fs";
 
 const app = express();
 const upload = multer({ dest: "uploads/" });
@@ -28,12 +28,21 @@ app.post("/tweet", upload.single("image"), async (req, res) => {
     const imagePath = req.file?.path;
     const success = await twitter.postTweet(content, imagePath);
 
+    if (success && req.file?.path) {
+      // Delete uploaded file after successful tweet
+      fs.unlinkSync(req.file.path);
+    }
+
     if (success) {
       res.json({ status: "success", message: "Tweet posted successfully" });
     } else {
       res.status(500).json({ error: "Failed to post tweet" });
     }
   } catch (error) {
+    if (req.file?.path) {
+      // Clean up file on error
+      fs.unlinkSync(req.file.path);
+    }
     console.error("Error posting tweet:", error);
     res.status(500).json({ error: "Internal server error" });
   }
