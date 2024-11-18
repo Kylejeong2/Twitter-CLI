@@ -57,16 +57,23 @@ export class TwitterService {
     try {
       console.log("Navigating to tweet compose page...");
       await this.stagehand.page.goto("https://x.com/compose/post");
-
-      // Check if we need to login
+      
+      // Wait for either login form or compose box to appear
+      await this.stagehand.act({ 
+        action: "wait for either the login form or the tweet compose box to be visible" 
+      });
+    
+      // More reliable login check
       const needsLogin = await this.stagehand.extract({
-        instruction: "check if login form is visible, it should be visible if you are not logged in",
+        instruction: "check if we're on the login page by looking for login-specific elements like 'Log in to X' heading or login form fields. Return true if login elements are present, false if we see the tweet compose box",
         schema: z.object({
           needsLogin: z.boolean()
         })
       });
 
       if (needsLogin.needsLogin) {
+        // Add a small delay to ensure form is interactive
+        await this.stagehand.page.waitForTimeout(1000);
         await this.stagehand.act({ action: "click the button that says 'Phone, email, or username'"});
         console.log("Login required, proceeding with login...");
         await this.stagehand.act({ 
